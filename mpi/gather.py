@@ -4,8 +4,8 @@ def main():
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
-    
-    print(comm,size,rank)    
+
+    print(comm,size,rank)
 
     data = (rank+1)**2
     data = comm.gather(data, root=0)
@@ -16,5 +16,5 @@ def main():
         assert data is None
 
 
-if __name__ is "__main__":
+if __name__ == "__main__":
     main()
