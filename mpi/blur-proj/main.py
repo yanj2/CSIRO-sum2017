@@ -86,7 +86,7 @@ def runstats(name):
     f = open("stats.jpg", "a")
     f.write("----{}----\n".format(name))
 
-    for n in range(len(clock.times())):
+    for n in range(len(clock.times)):
         f.write("{0:5}  :  {1:3}\n".format(n,clock.times[n]))
 
     f.close()
