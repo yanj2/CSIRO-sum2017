@@ -61,13 +61,18 @@ def main():
         print ("Failed to load {}".format(args[1]))
         quit()
 
-    # optimal is 5 workers
-    for n in range(1,src.shape[1]):
+    for n in range(1,src.shape[0]):
 
         # calculate the horizontal and vertial gradients of the image
-        edgex = imgfilter(src, sobelx, n, JOBLIB1)
-        edgey = imgfilter(src, sobely, n, JOBLIB1)
+        edgex = imgfilter(src, sobelx, n, JOBLIB2)
+        edgey = imgfilter(src, sobely, n, JOBLIB2)
 
+    """
+    # for test runs of new implementations
+    edgex = imgfilter(src, sobelx, 4, JOBLIB2)
+    edgey = imgfilter(src, sobely, 4, JOBLIB2)
+    """
+    
     # calculate the gradient magnitudes of the image
     result = np.sqrt(edgex ** 2 + edgey ** 2)
 
@@ -78,17 +83,18 @@ def main():
     io.imsave("output.jpg", result.astype(np.uint8))
 
     # write the computation times for different numbers of workers into a file
-    runstats("joblib-version1")
+    runstats("joblib-version2")
 
 # write the computation times for different numbers of workers into a file
 def runstats(name):
 
-    f = open("stats.jpg", "a")
-    f.write("----{}----\n".format(name))
+    f = open("stats.txt", "a")
+    f.write("\n----{}----\n".format(name))
 
-    for n in range(len(clock.times)):
-        f.write("{0:5}  :  {1:3}\n".format(n,clock.times[n]))
+    for n in range(np.floor(len(clock.times)/2).astype(int)):
+        f.write("{0:5}  :  {1:3}\n".format(n+1,clock.times[n] + clock.times[n+1]))
 
+    f.write("-"*(len(name)+8) + "\n")
     f.close()
 
 # helper function that applies the given "kern" filter to the provided src
@@ -110,7 +116,7 @@ def imgfilter(src, kern, workers, version=SERIAL):
         for col in range(offset, dim[0]-offset):
             for row in range(offset, dim[1]-offset):
                 copy[col, row] = np.sum(src[col-offset:col+offset+1,
-                    row-offset:row+offset+1] * kern, axis=(1,0))
+                                 row-offset:row+offset+1] * kern, axis=(1,0))
 
         clock.addtime()
         clock.times.append(clock.gettime())
@@ -126,20 +132,42 @@ def imgfilter(src, kern, workers, version=SERIAL):
             for col in range(offset, dim[0]-offset):
 
                 # !! find a way to increase the work completed by the function
-                copy[col,offset:dim[0]-offset] = np.array(parallel(delayed(edit)(src, col, row, offset, kern)
-                                      for row in range(offset, dim[1]-offset)))
+                copy[col,offset:dim[1]-offset] = np.array(parallel(delayed(editcell)(src, col, row, offset, kern)
+                                                 for row in range(offset, dim[1]-offset)))
 
         clock.addtime()
         clock.times.append(clock.gettime())
         clock.reset()
 
     elif (version == JOBLIB2):
-        return None
+
+        clock.starttime()
+
+        with Parallel(n_jobs=workers) as parallel:
+
+            copy = np.array(parallel(delayed(edit)(src, offset, kern, col)
+                   for col in range(offset, dim[0]-offset)))
+
+        clock.addtime()
+        clock.times.append(clock.gettime())
+        clock.reset()
 
     # return final edited image array
     return copy
 
-def edit(src, col, row, offset, kern):
+# calculate the new values for each column
+def edit(src, offset, kern, col):
+
+    temp = src.copy()[col] # temp storage of the column being calc
+
+    for row in range(offset, src.shape[1]-offset):
+        temp[row] = np.sum(src[col-offset:col+offset+1,
+                        row-offset:row+offset+1] * kern, axis=(1,0))
+
+    return temp
+
+# calculate the new value of the cell based on the given kern
+def editcell(src, col, row, offset, kern):
     return np.sum(src[col-offset:col+offset+1, row-offset:row+offset+1] * kern, axis=(1,0))
 
 
