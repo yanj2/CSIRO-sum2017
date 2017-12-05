@@ -36,6 +36,7 @@ sobely = sobelx.transpose()
 SERIAL = 0
 JOBLIB1 = 1
 JOBLIB2 = 2
+NESTED = 3
 
 clock = Timer()
 
@@ -61,7 +62,8 @@ def main():
         print ("Failed to load {}".format(args[1]))
         quit()
 
-    for n in range(1,src.shape[0]):
+
+    for n in range(1,20):
 
         # calculate the horizontal and vertial gradients of the image
         edgex = imgfilter(src, sobelx, n, JOBLIB2)
@@ -69,10 +71,10 @@ def main():
 
     """
     # for test runs of new implementations
-    edgex = imgfilter(src, sobelx, 4, JOBLIB2)
-    edgey = imgfilter(src, sobely, 4, JOBLIB2)
+    edgex = imgfilter(src, sobelx, 4, NESTED)
+    edgey = imgfilter(src, sobely, 4, NESTED)
     """
-    
+
     # calculate the gradient magnitudes of the image
     result = np.sqrt(edgex ** 2 + edgey ** 2)
 
@@ -83,7 +85,7 @@ def main():
     io.imsave("output.jpg", result.astype(np.uint8))
 
     # write the computation times for different numbers of workers into a file
-    runstats("joblib-version2")
+    runstats("joblib-version2-big-one")
 
 # write the computation times for different numbers of workers into a file
 def runstats(name):
@@ -92,8 +94,12 @@ def runstats(name):
     f.write("\n----{}----\n".format(name))
 
     for n in range(np.floor(len(clock.times)/2).astype(int)):
-        f.write("{0:5}  :  {1:3}\n".format(n+1,clock.times[n] + clock.times[n+1]))
-
+        f.write("{0:5}  :  {1:3.8}\n".format(n+1,clock.times[n] + clock.times[n+1]))
+    '''
+    for n in range(np.floor(len(clock.times)/2).astype(int)):
+        for m in range(np.floor(len(clock.times)/2).astype(int)):
+            f.write("({}, {})  :  {2:3.8}\n".format(n+1,m+1,clock.times[n]+clock.times[n+1]))
+    '''
     f.write("-"*(len(name)+8) + "\n")
     f.close()
 
@@ -139,10 +145,12 @@ def imgfilter(src, kern, workers, version=SERIAL):
         clock.times.append(clock.gettime())
         clock.reset()
 
+    # creates workers to calculate the new values of each columns
     elif (version == JOBLIB2):
 
         clock.starttime()
 
+        # creates n workers that are reused in all calls of the function
         with Parallel(n_jobs=workers) as parallel:
 
             copy = np.array(parallel(delayed(edit)(src, offset, kern, col)
@@ -152,25 +160,53 @@ def imgfilter(src, kern, workers, version=SERIAL):
         clock.times.append(clock.gettime())
         clock.reset()
 
+    elif (version == NESTED):
+
+        clock.starttime()
+
+        # creates n workers that are reused in all calls of the function
+        with Parallel(n_jobs=workers) as parallel:
+
+            copy = np.array(parallel(delayed(nestededit)(src, offset, kern, col)
+                   for col in range(offset, dim[0]-offset)))
+
+        clock.addtime()
+        clock.times.append(clock.gettime())
+        clock.reset()
+
     # return final edited image array
     return copy
+
+#------------------------FUNCTIONS CALLS FOR PARALLEL-------------------------
+# calculates the new values for each column
+def nestededit(src, offset, kern, col):
+
+    # creates a set of threads that concurrently run the function
+    # reuses the same pool of 4 workers
+    with Parallel(n_jobs=4, backend="threading") as parallel:
+
+        # compiles and returns the calculated row values into an array
+        return parallel(delayed(editcell)(src, col, row, offset, kern)
+               for row in range(offset, src.shape[1]-offset))
 
 # calculate the new values for each column
 def edit(src, offset, kern, col):
 
     temp = src.copy()[col] # temp storage of the column being calc
 
+    # calculate the new value of each row element
     for row in range(offset, src.shape[1]-offset):
         temp[row] = np.sum(src[col-offset:col+offset+1,
                         row-offset:row+offset+1] * kern, axis=(1,0))
 
+    # returns an array of all the new column values
     return temp
 
 # calculate the new value of the cell based on the given kern
 def editcell(src, col, row, offset, kern):
     return np.sum(src[col-offset:col+offset+1, row-offset:row+offset+1] * kern, axis=(1,0))
 
-
+#-----------------------------------------------------------------------------
 # always keep main at the bottom so that all the functions have been declared
 # prior to running the content inside main
 if __name__ == "__main__":
