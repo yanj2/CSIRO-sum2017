@@ -37,7 +37,7 @@ SERIAL = 0
 JOBLIB1 = 1
 JOBLIB2 = 2
 NESTED = 3
-
+MPIPY = 4
 clock = Timer()
 
 # main function that controls the flow of the program
@@ -62,7 +62,7 @@ def main():
         print ("Failed to load {}".format(args[1]))
         quit()
 
-
+    """
     for n in range(1,20):
 
         # calculate the horizontal and vertial gradients of the image
@@ -71,9 +71,8 @@ def main():
 
     """
     # for test runs of new implementations
-    edgex = imgfilter(src, sobelx, 4, NESTED)
-    edgey = imgfilter(src, sobely, 4, NESTED)
-    """
+    edgex = imgfilter(src, sobelx, 6, NESTED)
+    edgey = imgfilter(src, sobely, 6, NESTED)
 
     # calculate the gradient magnitudes of the image
     result = np.sqrt(edgex ** 2 + edgey ** 2)
@@ -85,7 +84,7 @@ def main():
     io.imsave("output.jpg", result.astype(np.uint8))
 
     # write the computation times for different numbers of workers into a file
-    runstats("joblib-version2-big-one")
+    runstats(args[1][:-4])
 
 # write the computation times for different numbers of workers into a file
 def runstats(name):
