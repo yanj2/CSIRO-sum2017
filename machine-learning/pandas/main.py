@@ -11,7 +11,6 @@ def main():
 
     table = pivot.create_pivot_table(data)
 
-
     quit()
     descr_stats.stats(table)
     np.extract_np(table)

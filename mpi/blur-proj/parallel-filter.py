@@ -4,6 +4,7 @@ from skimage import io
 import sys
 import time
 from joblib import Parallel, delayed
+from mpi4py import MPI
 import os
 
 class Timer:
@@ -37,39 +38,54 @@ NESTED = 3
 MPIPY = 4
 clock = Timer()
 
-# main function that controls the flow of the program
-def main():
 
-    path = os.getcwd()+"/src-files" # find path to curr working dir
+# main function that controls the flow of the program
+def main(imgfile):
+
+    #path = os.getcwd()+"/src-files" # find path to curr working dir
 
     # read in the image files from the src-files directory and store them
     # in a list
-    for srcfile in os.listdir(path):
-        src = img.imread(path+'/'+srcfile, flatten=True)
 
-        edgex = imgfilter(src, sobelx, 6, JOBLIB2)
-        edgey = imgfilter(src, sobely, 6, JOBLIB2)
+    src = img.imread(imgfile[1]+'/'+imgfile[0], flatten=True)
 
-        # calculate the gradient magnitudes of the image
-        result = np.sqrt(edgex ** 2 + edgey ** 2)
+    edgex = imgfilter(src, sobelx, 6, JOBLIB2)
+    edgey = imgfilter(src, sobely, 6, JOBLIB2)
 
-        # normalise the adjusted pixel values
-        result = (result - np.min(result))/(np.max(result)-np.min(result)) * 255
+    # calculate the gradient magnitudes of the image
+    result = np.sqrt(edgex ** 2 + edgey ** 2)
 
-        # create a filename to save file
-        filename = "output-files/" + srcfile
+    # normalise the adjusted pixel values
+    result = (result - np.min(result))/(np.max(result)-np.min(result)) * 255
 
-        # save the final image in a new jpg file
-        io.imsave(filename, result.astype(np.uint8))
+    # create a filename to save file
+    filename = "output-files/" + imgfile[0]
 
-        # write the computation times for different numbers of workers into a file
-        # runstats(srcfile[:-4])
+    # save the final image in a new jpg file
+    io.imsave(filename, result.astype(np.uint8))
 
-def main_master():
+    # write the computation times for different numbers of workers into a file
+    # runstats(srcfile[:-4])
+
+def handler():
+
+    # right now it only works on exactly the right number of workers 
 
     path = os.getcwd()+"/src-files"
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size() - 1
 
-    comm = MPI.COMM_SELF_SPAWN()
+    if rank == 0:
+
+        srcdir = os.listdir(path)
+        for srcfile in srcdir:
+            comm.send((srcfile, path), dest=srcdir.index(srcfile) % size + 1)
+
+    else:
+
+        print("I am rank {}".format(rank))
+        main(comm.recv(source=0))
 
 # write the computation times for different numbers of workers into a file
 def runstats(name):
@@ -143,5 +159,4 @@ def edit(src, offset, kern, col):
 # always keep main at the bottom so that all the functions have been declared
 # prior to running the content inside main
 if __name__ == "__main__":
-    main_master()
-    main()
+    handler()
