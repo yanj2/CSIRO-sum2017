@@ -29,7 +29,7 @@ class Timer:
         self.end = time.clock()
 
     def fullreset(self):
-        times = [] 
+        self.times = []
 
 sobelx = np.array([[1,0,-1],[2,0,-2],[1,0,-1]])
 sobely = sobelx.transpose()
@@ -72,13 +72,12 @@ def main(imgfile):
 
 def handler():
 
-    # right now it only works on exactly the right number of workers
     path = os.getcwd()+"/src-files"
+    srcdir = os.listdir(path)
+
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
-
-    srcdir = os.listdir(path)
 
     pos = rank
     while pos < len(srcdir):
@@ -87,17 +86,26 @@ def handler():
         pos += size
 
 def handler_send():
+    # some issues here
+
+    path = os.getcwd()+"/src-files"
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
     if rank == 0:
 
         srcdir = os.listdir(path)
-        for srcfile in srcdir:
-            comm.isend((srcfile, path), dest=srcdir.index(srcfile) % size + 1)
+        for idx in range(len(srcdir)):
+            comm.isend(((srcdir[idx], path), len(srcdir)-(idx+1)), dest=idx % size + 1)
 
     else:
 
-        print("I am rank {}".format(rank))
-        main(comm.recv(source=0))
+        data = comm.recv(source=0)
+        while data[1]:
+            print("I am rank {}".format(rank))
+            main(data[0])
 
 # write the computation times for different numbers of workers into a file
 def runstats(name):
