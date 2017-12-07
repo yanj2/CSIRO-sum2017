@@ -28,6 +28,9 @@ class Timer:
         self.start = time.clock()
         self.end = time.clock()
 
+    def fullreset(self):
+        times = [] 
+
 sobelx = np.array([[1,0,-1],[2,0,-2],[1,0,-1]])
 sobely = sobelx.transpose()
 
@@ -69,18 +72,27 @@ def main(imgfile):
 
 def handler():
 
-    # right now it only works on exactly the right number of workers 
-
+    # right now it only works on exactly the right number of workers
     path = os.getcwd()+"/src-files"
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    size = comm.Get_size() - 1
+    size = comm.Get_size()
+
+    srcdir = os.listdir(path)
+
+    pos = rank
+    while pos < len(srcdir):
+        main((srcdir[pos], path))
+        runstats(srcdir[pos][:-4])
+        pos += size
+
+def handler_send():
 
     if rank == 0:
 
         srcdir = os.listdir(path)
         for srcfile in srcdir:
-            comm.send((srcfile, path), dest=srcdir.index(srcfile) % size + 1)
+            comm.isend((srcfile, path), dest=srcdir.index(srcfile) % size + 1)
 
     else:
 
@@ -98,6 +110,7 @@ def runstats(name):
         f.write("{0:5}  :  {1:3.8}\n".format(n+1,clock.times[n] + clock.times[n+1]))
 
     f.write("-"*(len(name)+8) + "\n")
+    clock.fullreset()
     f.close()
 
 # helper function that applies the given "kern" filter to the provided src

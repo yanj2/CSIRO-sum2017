@@ -87,7 +87,7 @@ def visualise_matplotlib():
         ax.text(0, 7, str(digits.target[i]))
 
     # Show the plot
-    plt.show()
+    plt.savefig("picture.jpg")
 
 
 if __name__ == "__main__":
