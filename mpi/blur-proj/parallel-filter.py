@@ -7,6 +7,11 @@ from joblib import Parallel, delayed
 from mpi4py import MPI
 import os
 
+"""
+Class Timer that handles keeping track of how long it takes for functions to
+run. Used specifically for comparing the difference in speed between serial
+and parallel versions of the code
+"""
 class Timer:
 
     times = []
@@ -41,7 +46,6 @@ NESTED = 3
 MPIPY = 4
 clock = Timer()
 
-
 # main function that controls the flow of the program
 def main(imgfile):
 
@@ -70,23 +74,28 @@ def main(imgfile):
     # write the computation times for different numbers of workers into a file
     # runstats(srcfile[:-4])
 
+# manages the parallel processes, iterates over each image file in the chosen
+# dir, delegates an image file to a process dependent on their rank and index
+# of the image file
 def handler():
 
-    path = os.getcwd()+"/src-files"
-    srcdir = os.listdir(path)
+    path = os.getcwd()+"/src-files"    # locates the directory for src files
+    srcdir = os.listdir(path)          # creates a list of files in the dir
 
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
+    comm = MPI.COMM_WORLD              # creates a communicator for the process
+    rank = comm.Get_rank()             # variable for the rank of curr process
+    size = comm.Get_size()             # variable for total number of processes
 
-    pos = rank
+    pos = rank                         # init position for process in srcdir
+
+    # run the imgfilter function on all images delegated to this process
     while pos < len(srcdir):
         main((srcdir[pos], path))
         runstats(srcdir[pos][:-4])
         pos += size
 
 def handler_send():
-    # some issues here
+    # some issues that need to be resolved with this version of MPI 
 
     path = os.getcwd()+"/src-files"
 
