@@ -6,7 +6,7 @@ import time
 from joblib import Parallel, delayed
 from mpi4py import MPI
 import os
-
+import platform
 """
 Class Timer that handles keeping track of how long it takes for functions to
 run. Used specifically for comparing the difference in speed between serial
@@ -49,11 +49,6 @@ clock = Timer()
 # main function that controls the flow of the program
 def main(imgfile):
 
-    #path = os.getcwd()+"/src-files" # find path to curr working dir
-
-    # read in the image files from the src-files directory and store them
-    # in a list
-
     src = img.imread(imgfile[1]+'/'+imgfile[0], flatten=True)
 
     edgex = imgfilter(src, sobelx, 6, JOBLIB2)
@@ -71,8 +66,6 @@ def main(imgfile):
     # save the final image in a new jpg file
     io.imsave(filename, result.astype(np.uint8))
 
-    # write the computation times for different numbers of workers into a file
-    # runstats(srcfile[:-4])
 
 # manages the parallel processes, iterates over each image file in the chosen
 # dir, delegates an image file to a process dependent on their rank and index
@@ -90,12 +83,13 @@ def handler():
 
     # run the imgfilter function on all images delegated to this process
     while pos < len(srcdir):
+        print("i am rank {}, on node {}".format(rank, platform.node()))
         main((srcdir[pos], path))
-        runstats(srcdir[pos][:-4])
+        #runstats(srcdir[pos][:-4])
         pos += size
 
 def handler_send():
-    # some issues that need to be resolved with this version of MPI 
+    # some issues that need to be resolved with this version of MPI
 
     path = os.getcwd()+"/src-files"
 
