@@ -1,4 +1,6 @@
 """
+SCOOP provides implementation for parallel distribution across cpu's
+
 Using DEAP, we are going to solve the One Max Problem using a Genetic Algorithm.
 
 A Genetic Algorithm is a method of finding an optimum of a population through
@@ -15,9 +17,11 @@ https://github.com/DEAP/deap/blob/master/examples/ga/onemax.py
 """
 import random
 
+from scoop import futures
 from deap import base
 from deap import creator
 from deap import tools
+from mpi4py import MPI
 
 # After they've been created, all our defined classes will be part of the
 # creator container
@@ -40,8 +44,17 @@ toolbox.register("evaluate", evalOneMax)
 toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
 toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("map", futures.map)
 
 def main():
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    if rank == 0:
+
+
     random.seed(64)
 
     pop = toolbox.population(n=300)
