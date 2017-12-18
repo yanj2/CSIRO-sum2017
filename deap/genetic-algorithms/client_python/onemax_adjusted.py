@@ -1,9 +1,13 @@
-
+"""
+Using the code originally taken from DEAP onemax example, rewriting for solving
+functions in the Black Box Optimisation functions.
+"""
 from ctypes import *
 from numpy.ctypeslib import ndpointer
 from numpy import *
 import sys
 import platform
+import json
 
 from deap import base
 from deap import creator
@@ -40,13 +44,13 @@ bbcomp.history.argtypes = [c_int, ndpointer(c_double, flags="C_CONTIGUOUS"), ndp
 bbcomp.errorMessage.restype = c_char_p
 
 
-print("----------------------------------------------")
-print("black box example competition client in Python")
-print("----------------------------------------------")
+print("--------------------------------------")
+print("black box competition client in Python")
+print("--------------------------------------")
 print("")
 
 # change the track name to trialMO for multi-objective optimization
-track = "trial"
+TRACK = "trial"
 # track = "trialMO"
 
 # set configuration options (this is optional)
@@ -89,7 +93,7 @@ if numProblems == 0:
 print("The track consists of " + str(numProblems) + " problems.")
 
 # For demonstration purposes we optimize only the first problem in the track.
-problemID = 2
+problemID = 0
 result = bbcomp.setProblem(problemID)
 if result == 0:
 	sys.exit("setProblem() failed: " + str(bbcomp.errorMessage().decode("ascii")))
@@ -135,30 +139,41 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 def evalBbcomp(individual):
 
-	# initialise the values 
+	global evals
+
+	# initialise the values
 	individual.fitness.values = zeros(obj)
 	# create a temp array to calculate the values (converts to array form)
 	values = array(individual.fitness.values)
+
+	if (evals >= bud):
+		return values
+
 	# evaluate the points and the values (array form)
 	result = bbcomp.evaluate(individual, values)
 	# check if evaluation was successful
 	if result == 0:
 		sys.exit("evaluate() failed: " + str(bbcomp.errorMessage().decode("ascii")))
+
+	evals += 1
+
 	# assign new value if evaluation was successful (tuple form)
 	individual.fitness.values = values
 	# print for checking
-	print(individual, individual.fitness.values, result)
+	print("[{}],{},{}".format(evals, individual, individual.fitness.values))
 	return values
 
 toolbox.register("evaluate", evalBbcomp)
-toolbox.register("mate", tools.cxTwoPoint)
-toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+toolbox.register("mate", tools.cxOnePoint)
+#toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+# use a different mutation method
+toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.05)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 def main():
     random.seed(64)
 
-    pop = toolbox.population(n=300)
+    pop = toolbox.population(n=200)
 
     CXPB, MUTPB = 0.5, 0.2
 
@@ -173,8 +188,7 @@ def main():
     fits = [ind.fitness.values[0] for ind in pop]
 
     g = 0
-
-    while max(fits) < 100 and g < 1000:
+    while (evals < bud):
         g = g + 1
         print("-- Generation %i --" % g)
 
@@ -185,13 +199,13 @@ def main():
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
              if random.random() < CXPB:
-                 toolbox.mate(child1, child2)
+                 toolbox.mate(child1[0], child2[0])
                  del child1.fitness.values
                  del child2.fitness.values
 
         for mutant in offspring:
             if random.random() < MUTPB:
-                toolbox.mutate(mutant)
+                toolbox.mutate(mutant[0])
                 del mutant.fitness.values
 
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -208,16 +222,28 @@ def main():
         sum2 = sum(x*x for x in fits)
         std = abs(sum2 / length - mean**2)**0.5
 
-        print("  Min %s" % min(fits))
+        print("  Min %s" % min([val for val in fits if val != 0]))
         print("  Max %s" % max(fits))
         print("  Avg %s" % mean)
         print("  Std %s" % std)
 
     best_ind = tools.selBest(pop, 1)[0]
-    print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+    print("Best individual is %s, with value %s" % (best_ind, best_ind.fitness.values))
 
 if __name__ == "__main__":
-    main()
+
+	if evals > 0:
+		point = zeros(dim)
+		value = zeros(obj)
+		for i in range(evals):
+			result = bbcomp.history(i, point, value)
+			if result == 0:
+				sys.exit("history() failed: " + str(bbcomp.errorMessage().decode("ascii")))
+			print(point, value)
+
+	main()
+	if evals < bud:
+		main()
 
 """
 # when using evaluate, since it changes it in place, make a copy of the value

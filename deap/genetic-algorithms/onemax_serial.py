@@ -61,7 +61,7 @@ def main():
         ind.fitness.values = fit
 
     # Extracting all the fitnesses of
-    fits = [ind.fitness.values[0] for ind in pop]
+    fits = [ind.fitness.values for ind in pop]
 
     g = 0
 
@@ -92,7 +92,7 @@ def main():
 
         pop[:] = offspring
 
-        fits = [ind.fitness.values[0] for ind in pop]
+        fits = [ind.fitness.values for ind in pop]
 
         length = len(pop)
         mean = sum(fits) / length
@@ -104,7 +104,7 @@ def main():
         print("  Avg %s" % mean)
         print("  Std %s" % std)
 
-    best_ind = tools.selBest(pop, 1)[0]
+    best_ind = tools.selBest(pop, 1)
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
 if __name__ == "__main__":
