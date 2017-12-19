@@ -137,6 +137,13 @@ toolbox.register("individual", tools.initRepeat, creator.Individual,
                  toolbox.attr_points, 1)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
+# For the sake of testing while waiting for login details
+def evalparabola(individual):
+	individual.fitness.values = zeros(obj)
+	values = array(individual.fitness.values)
+	values = individual[0]^2 + individual[1]^2 
+
+
 def evalBbcomp(individual):
 
 	global evals
