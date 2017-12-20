@@ -1,6 +1,7 @@
 """
 Using the code originally taken from DEAP onemax example, rewriting for solving
 functions in the Black Box Optimisation functions.
+
 """
 from ctypes import *
 from numpy.ctypeslib import ndpointer
@@ -59,7 +60,7 @@ if result == 0:
 	sys.exit("configure() failed: " + str(bbcomp.errorMessage()))
 
 # login with demo account - this should grant access to the "trial" and "trialMO" tracks (for testing and debugging)
-result = bbcomp.login("demoaccount".encode('ascii'), "demopassword".encode('ascii'))
+result = bbcomp.login("jieyan".encode('ascii'), "jieyan398".encode('ascii'))
 if result == 0:
 	sys.exit("login() failed: " + str(bbcomp.errorMessage().decode("ascii")))
 
@@ -136,12 +137,6 @@ toolbox.register("attr_points", tools.initRepeat, creator.Points, random.rand, d
 toolbox.register("individual", tools.initRepeat, creator.Individual,
                  toolbox.attr_points, 1)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-# For the sake of testing while waiting for login details
-def evalparabola(individual):
-	individual.fitness.values = zeros(obj)
-	values = array(individual.fitness.values)
-	values = individual[0]^2 + individual[1]^2 
 
 
 def evalBbcomp(individual):
