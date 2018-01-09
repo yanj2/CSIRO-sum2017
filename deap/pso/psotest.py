@@ -1,5 +1,6 @@
 """
 Particle Swarm Optimization Parabaloid - Written By Jie Jenny Yan, December 2017
+https://www.researchgate.net/post/How_can_one_decide_inertia_weight_w_during_the_implementation_of_PSO
 """
 
 import operator
