@@ -46,6 +46,7 @@ PSO Algorithm:
 """
 import operator
 import random
+from math import sqrt
 
 import numpy
 
@@ -105,6 +106,8 @@ toolbox.register("update", updateParticle, phi_p=0.5, phi_g=0.5, w=0.5)
 def main():
     pop = toolbox.population(n=50)
     g = 1
+    delta = 1e-4
+    epsilon = 1e-4
     best = None
 
     for particle in pop:
@@ -128,11 +131,14 @@ def main():
                 if particle.best.fitness.values > best.fitness.values:
                     best = creator.Particle(particle.best)
                     best.fitness.values = particle.best.fitness.values
-                    # include terminating conditions regarding prev and curr best  
+                    # missing the sqrt terminating condition 
+                    if best.fitness.values - prev_best.fitness.values < epsilon:
+                        return pop, best
         g = g + 1
         prev_best = creator.Particle(best)
         prev_best.fitness.values = best.fitness.values
-        break
+
+    return pop, best
 
 
 
