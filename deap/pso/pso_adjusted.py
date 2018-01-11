@@ -61,9 +61,9 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 
 # check all the attributes that we will need !!
 # Creates a particle with initial declaration of its contained attributes
-# Particle creator is a list container that holds the attributes: fitness, speed, .... NOTE: update
+# Particle creator is a list container that holds the attributes: fitness, velocity, .... NOTE: update
 
-creator.create("Particle", list, fitness=creator.FitnessMin, speed=list, best_known=None)
+creator.create("Particle", list, fitness=creator.FitnessMin, velocity=list, best_known=None)
 
 # ----------------------------Toolbox Functions------------------------------
 # evaluates the fitness of the position
@@ -74,18 +74,32 @@ def evalparabola(individual):
 def generate(size, bound_l, bound_u):
     particle = creator.Particle(random.uniform(bound_l,bound_u) for _ in range(size))
     bound = bound_u - bound_l
-    particle.speed = [random.uniform(-abs(bound), abs(bound)) for _ in range(size)]
+    particle.velocity = [random.uniform(-abs(bound), abs(bound)) for _ in range(size)]
     particle.best_known = creator.Particle(particle)
     return particle
 
-def updateParticle(particle):
-    
+# NOTE: remember to verify the correctness of this funciton
+# updating the velocity and position of the particle
+def updateParticle(particle, best, w, phi_p, phi_g):
+    r_p = random.uniform(0,1)
+    r_g = random.uniform(0,1)
+    # list of best_known - curr
+    p = map(operator.sub, particle.best_known, particle)
+    # list of global_best - curr
+    g = map(operator.sub, best, particle)
+    # scaled impact of best positions
+    v_p = [phi_p * r_p * x for x in p]
+    v_g = [phi_g * r_g * x for x in g]
+    # scaled velocity
+    v_w = [w * x for x in particle]
+    particle.velocity = list(map(operator.add, v_w, map(operator.add, v_p, v_g)))
+    particle = list(map(operator.add, particle, particle.velocity))
 
 toolbox = base.Toolbox()
 toolbox.register("evaluate", evalparabola)
 toolbox.register("particle", generate, size=2, bound_l=-10, bound_u=10)
 toolbox.register("population", tools.initRepeat, list, toolbox.particle)
-# register update function
+toolbox.register("update", updateParticle, phi_p=0.5, phi_g=0.5, w=0.5)
 
 # -----------------------------Main Algorithm--------------------------------
 def main():
@@ -101,11 +115,25 @@ def main():
             best = creator.Particle(particle)
             best.fitness.values = particle.fitness.values
 
+    prev_best = creator.Particle(best)
+    prev_best.fitness.values = best.fitness.values
+
     while g <= GMAX:
         for particle in pop:
-            r_p = random.uniform(0,1)
-            r_g = random.uniform(0,1)
-            toolbox.update(particle)
+            toolbox.update(particle, best)
+            particle.fitness.values = toolbox.evaluate(particle)
+            if particle.fitness.values > particle.best_known.fitness.values:
+                particle.best = creator.Particle(particle)
+                particle.best.fitness.values = particle.fitness.values
+                if particle.best.fitness.values > best.fitness.values:
+                    best = creator.Particle(particle.best)
+                    best.fitness.values = particle.best.fitness.values
+                    # include terminating conditions regarding prev and curr best  
+        g = g + 1
+        prev_best = creator.Particle(best)
+        prev_best.fitness.values = best.fitness.values
+        break
+
 
 
 
