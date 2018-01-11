@@ -28,7 +28,6 @@ def generate(size, pmin, pmax, smin, smax):
     particle.speed = [random.uniform(smin, smax) for _ in range(size)]
     particle.smin = smin
     particle.smax = smax
-    print(particle)
     return particle
 
 # Function that first computes the speed, then limits the speed values between
