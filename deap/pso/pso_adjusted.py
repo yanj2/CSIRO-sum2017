@@ -4,9 +4,9 @@ Particle Swarm Optimisation with improvements - Jie Jenny Yan, January 2018
 - Fitness function: Parabaloid
 - Particle Attributes: velocity, best_known, global_best, curr_pos #CHECK
 - Constants: upper/lower bounds (b_u, b_l: generate function, random.uniform),
-             inertia weighting (w: swarm evolution -> velocity equation),
-             accel coefficients (phi_p, phi_g: swarm evolution -> velocity equation),
-             diversify search (r_p, r_g: swarm evolution, velocity equation),
+             inertia weighting (w: swarm evolution function -> velocity equation),
+             accel coefficients (phi_p, phi_g: swarm evolution function -> velocity equation),
+             diversify search (r_p, r_g: swarm evolution function, velocity equation),
 
 PSO Algorithm:
 
@@ -52,9 +52,10 @@ from deap import benchmarks
 from deap import creator
 from deap import tools
 
-GMAX = 100
-DELTA = 1e-4
-EPSILON = 1e-4
+GMAX = 500
+DELTA = 1e-7
+EPSILON = 1e-7
+DIM = 2
 
 # Creates a fitness object that minimises its fitness value
 creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -65,26 +66,66 @@ creator.create("Fitness", base.Fitness, weights=(1.0,))
 
 creator.create("Particle", list, fitness=creator.Fitness, velocity=list, best_known=None)
 
-# ----------------------------Toolbox Functions------------------------------
+# ----------------------------Optimisation Functions------------------------------
 # evaluates the fitness of the position
-def evalparabola(individual):
-    return -1.0 * np.sum((np.array(individual) - 1.)**2),
+
+# NOTE: need to check whether the particles will still find the right place`
+# if they start at a point far away from the optima
+
+def sphere(individual):
+    return -1.0 * np.sum((np.array(individual) - 3.)**2),
+
+def rastrigin(individual):
+    # 0.8,0.8,0.8
+    sq_component = np.array(individual) **2
+    cos_component = np.cos(2 * np.pi * np.array(individual))
+    summation = np.subtract(sq_component, 10 * cos_component)
+    return -1.0 * (10 * DIM + np.add.reduce(summation)),
+
+def ackley(individual):
+    sqrt_component = np.sqrt(0.5 * np.add.reduce(np.square(np.array(individual))))
+    # NOTE: converges to -1, 2 dimensions only
+    cos_component = 0.5 * np.cos(2 * np.pi * np.array(individual))
+    return -1.0 * (-20 * np.exp(-0.2 * sqrt_component) - np.exp(cos_component) + np.exp(1) + 20)
+
+def rosenbrock(individual):
+    summation = np.array([100*((individual[i+1] - individual[i]**2)**2) + (individual[i] - 1)**2 for i in range(len(individual)-2)])
+    return -np.add.reduce(summation),
+
+def beale(individual):
+    #NOTE: 2 dimensions only
+    x = individual[0]
+    y = individual[1]
+    first = 1.5 - x + x * y
+    second = 2.25 - x + x * y ** 2
+    third = 2.625 - x + x * y ** 3
+    return -1.0 * (first ** 2 + second ** 2 + third ** 2),
+
+def bukin6(individual):
+    #NOTE:-15 <= x <= -5, -3 <= y <= 3
+    x = individual[0]
+    y = individual[1]
+    sqrt_component = np.sqrt(abs(y - 0.01 * x **2))
+    abs_component = 0.01 * abs(x + 10)
+    return -1.0 * (100 * sqrt_component + abs_component),
+
+# --------------------------Swarm operations ---------------------------------
 
 # generates and returns a particle based on the dim (size) of the problem
 def generate(size, bound_l, bound_u):
     particle = creator.Particle(np.random.uniform(bound_l,bound_u) for _ in range(size))
     bound = bound_u - bound_l
     particle.velocity = [np.random.uniform(-abs(bound), abs(bound)) for _ in range(size)]
+    # particle.velocity = [0 for _ in range(size)]
     particle.best_known = creator.Particle(particle)
     return particle
 
 # NOTE: remember to verify the correctness of this funciton
 # updating the velocity and position of the particle
 def updateParticle(particle, best, w, phi_p, phi_g):
-    # r_p = [np.random.uniform(0,1) for _ in particle]
-    # r_g = [np.random.uniform(0,1) for _ in particle]
-    r_p = [1. for _ in particle]
-    r_g = [1. for _ in particle]
+    r_p = [np.random.uniform(0,1) for _ in particle]
+    r_g = [np.random.uniform(0,1) for _ in particle]
+
     # list of best_known - curr
     p = list(map(operator.sub, particle.best_known, particle))
 
@@ -94,19 +135,19 @@ def updateParticle(particle, best, w, phi_p, phi_g):
     # scaled impact of best positions
     v_p = [phi_p * r * x for x,r in zip(p,r_p)]
     v_g = [phi_g * r * x for x,r in zip(g,r_g)]
-    # scaled velocity
-    v_w = [w * x for x in particle]
 
+    # scaled velocity
+    v_w = [w * x for x in particle.velocity]
     particle.velocity = list(map(operator.add, v_w, map(operator.add, v_p, v_g)))
 
-    particle[:] = list(map(operator.sub, particle, particle.velocity))
+    particle[:] = list(map(operator.add, particle, particle.velocity))
 
 # registering all the functions to the toolbox
 toolbox = base.Toolbox()
-toolbox.register("evaluate", evalparabola)
-toolbox.register("particle", generate, size=2, bound_l=-5, bound_u=5)
+toolbox.register("evaluate", bukin6)
+toolbox.register("particle", generate, size=DIM, bound_l=-5, bound_u=5)
 toolbox.register("population", tools.initRepeat, list, toolbox.particle)
-toolbox.register("update", updateParticle, phi_p=0.5, phi_g=0.5, w=0.5)
+toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
 
 # -----------------------------Main Algorithm--------------------------------
 def main():
@@ -131,7 +172,7 @@ def main():
         particle.best_known.fitness.values = particle.fitness.values
 
         # NOTE: when comparing minimised fitness values, a > b returns true if
-        # a is smaller than b ????
+        # a is smaller than b
         if not best or (best.fitness.values > particle.fitness.values):
 
             best = creator.Particle(particle)
@@ -143,16 +184,10 @@ def main():
 
     # evolving the particle population
     while g <= GMAX:
-
         for particle in pop:
-            # print("----------------------")
-            # print(particle)
-
 
             # move the particles with the update function and eval new fitness
             toolbox.update(particle, best)
-            # print(particle)
-            # print("----------------------")
             particle.fitness.values = toolbox.evaluate(particle)
 
             # update the best_known position
@@ -170,12 +205,14 @@ def main():
                     # if the fitness has converged, stop evolving
                     if best.fitness.values[0] - prev_best.fitness.values[0] < EPSILON:
                         logbook.record(gen=g, **stats.compile(pop))
+                        print("fitness values")
                         print(logbook.stream)
                         return pop, best
 
                     # if the posiiton has converged, stop evolving
                     if np.sqrt(np.add.reduce(np.square(np.subtract(best, prev_best)))) < DELTA:
                         logbook.record(gen=g, **stats.compile(pop))
+                        print("position values")
                         print(logbook.stream)
                         return pop, best
 
@@ -184,7 +221,6 @@ def main():
         prev_best.fitness.values = best.fitness.values
 
         # update our records
-        #print(pop)
         logbook.record(gen=g, **stats.compile(pop))
         g = g + 1
 

@@ -2,7 +2,7 @@ from slackclient import SlackClient
 
 def main():
 
-    slack_token = "xoxp-289274891636-288579619664-289382437285-b428e9fdbe674508ebcec1b4dcb7caae"
+    slack_token = "xoxp-289274891636-289747038498-289228558673-2ed610c4e7455bf8630fc75ce61d1276"
     sc = SlackClient(slack_token)
 
     sc.api_call(

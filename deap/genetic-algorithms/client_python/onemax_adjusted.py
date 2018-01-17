@@ -52,7 +52,7 @@ print("")
 
 # change the track name to trialMO for multi-objective optimization
 TRACK = "trial"
-# track = "trialMO"
+track = "trialMO"
 
 # set configuration options (this is optional)
 result = bbcomp.configure(1, "logs/".encode('ascii'))
