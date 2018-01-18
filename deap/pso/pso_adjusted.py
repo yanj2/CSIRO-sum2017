@@ -63,8 +63,8 @@ creator.create("Fitness", base.Fitness, weights=(1.0,))
 # check all the attributes that we will need !!
 # Creates a particle with initial declaration of its contained attributes
 # Particle creator is a list container that holds the attributes: fitness, velocity, .... NOTE: update
-
-creator.create("Particle", list, fitness=creator.Fitness, velocity=list, best_known=None)
+#NOTE:????????????????????
+creator.create("Particle", np.ndarray, fitness=creator.Fitness, velocity=np.ndarray(DIM), best_known=None)
 
 # ----------------------------Optimisation Functions------------------------------
 # evaluates the fitness of the position
@@ -115,7 +115,7 @@ def bukin6(individual):
 def generate(size, bound_l, bound_u):
     particle = creator.Particle(np.random.uniform(bound_l,bound_u) for _ in range(size))
     bound = bound_u - bound_l
-    particle.velocity = [np.random.uniform(-abs(bound), abs(bound)) for _ in range(size)]
+    particle.velocity = np.array([np.random.uniform(-abs(bound), abs(bound)) for _ in range(size)])
     # particle.velocity = [0 for _ in range(size)]
     particle.best_known = creator.Particle(particle)
     return particle
@@ -123,28 +123,38 @@ def generate(size, bound_l, bound_u):
 # NOTE: remember to verify the correctness of this funciton
 # updating the velocity and position of the particle
 def updateParticle(particle, best, w, phi_p, phi_g):
-    r_p = [np.random.uniform(0,1) for _ in particle]
-    r_g = [np.random.uniform(0,1) for _ in particle]
+    r_p = np.array([np.random.uniform(0,1) for _ in particle])
+    r_g = np.array([np.random.uniform(0,1) for _ in particle])
+
+    p = np.subtract(particle.best_known, particle)
+    g = np.subtract(best, particle)
+
+    v_p = phi_p * np.multiply(p, r_p)
+    v_g = phi_g * np.multiply(g, r_g)
+
+    v_w = w * particle.velocity
+    particle.velocity = np.add(v_w, np.add(v_p, v_g))
+    particle[:] = np.add(particle, particle.velocity)
 
     # list of best_known - curr
-    p = list(map(operator.sub, particle.best_known, particle))
+    # p = list(map(operator.sub, particle.best_known, particle))
 
     # list of global_best - curr
-    g = list(map(operator.sub, best, particle))
+    # g = list(map(operator.sub, best, particle))
 
     # scaled impact of best positions
-    v_p = [phi_p * r * x for x,r in zip(p,r_p)]
-    v_g = [phi_g * r * x for x,r in zip(g,r_g)]
+    # v_p = [phi_p * r * x for x,r in zip(p,r_p)]
+    # v_g = [phi_g * r * x for x,r in zip(g,r_g)]
 
     # scaled velocity
-    v_w = [w * x for x in particle.velocity]
-    particle.velocity = list(map(operator.add, v_w, map(operator.add, v_p, v_g)))
+    # v_w = [w * x for x in particle.velocity]
+    # particle.velocity = list(map(operator.add, v_w, map(operator.add, v_p, v_g)))
 
-    particle[:] = list(map(operator.add, particle, particle.velocity))
+    # particle[:] = list(map(operator.add, particle, particle.velocity))
 
 # registering all the functions to the toolbox
 toolbox = base.Toolbox()
-toolbox.register("evaluate", bukin6)
+toolbox.register("evaluate", rastrigin)
 toolbox.register("particle", generate, size=DIM, bound_l=-5, bound_u=5)
 toolbox.register("population", tools.initRepeat, list, toolbox.particle)
 toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
@@ -173,7 +183,7 @@ def main():
 
         # NOTE: when comparing minimised fitness values, a > b returns true if
         # a is smaller than b
-        if not best or (best.fitness.values > particle.fitness.values):
+        if best is None or (best.fitness.values > particle.fitness.values):
 
             best = creator.Particle(particle)
             best.fitness.values = particle.fitness.values
