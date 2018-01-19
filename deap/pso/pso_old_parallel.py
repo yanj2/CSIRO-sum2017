@@ -1,8 +1,8 @@
 """
 Particle Swarm Optimisation with improvements - Jie Jenny Yan, January 2018
-- Framework: DEAP, Scoop
-- Fitness function: Optimisation Test Functions
-- Particle Attributes: velocity, best_known, curr_pos
+- Framework: DEAP
+- Fitness function: Parabaloid
+- Particle Attributes: velocity, best_known, global_best, curr_pos #CHECK
 - Constants: upper/lower bounds (b_u, b_l: generate function, random.uniform),
              inertia weighting (w: swarm evolution function -> velocity equation),
              accel coefficients (phi_p, phi_g: swarm evolution function -> velocity equation),
@@ -16,7 +16,7 @@ PSO Algorithm:
     - find global best position while initialising the swarm
     - sample the velocity per particle from a uniform distribution
 
-2) track prior global best (for terminating condition)
+2) track prior global best (??)
 
 3) swarm evolution
     - for each particle in the swarm:
@@ -47,20 +47,28 @@ PSO Algorithm:
 import numpy as np
 
 from deap import base
-from deap import benchmark
+from deap import benchmarks
 from deap import creator
 from deap import tools
 
 from scoop import futures
 
-GMAX = 500             # Max number of generations
-DELTA = 1e-7           # Smallest position increment allowed
-EPSILON = 1e-7         # Smallest fitness value increment allowed
-DIM = 4                # No. of Dimensions in the problem
-POPULATION = 50        # Size of the particle swarm
+GMAX = 500
+DELTA = 1e-7
+EPSILON = 1e-7
+DIM = 4
+
+# Creates a fitness object that minimises its fitness value
+creator.create("Fitness", base.Fitness, weights=(1.0,))
+
+# check all the attributes that we will need !!
+# Creates a particle with initial declaration of its contained attributes
+# Particle creator is a list container that holds the attributes: fitness, velocity, .... NOTE: update
+#NOTE:????????????????????
+creator.create("Particle", np.ndarray, fitness=creator.Fitness, velocity=np.ndarray(DIM), best_known=None)
 
 # ----------------------------Optimisation Functions------------------------------
-# Evaluates the fitness of the position
+# evaluates the fitness of the position
 
 # NOTE: need to check whether the particles will still find the right place`
 # if they start at a point far away from the optima
@@ -105,13 +113,15 @@ def bukin6(individual):
 # --------------------------Swarm operations ---------------------------------
 
 # generates and returns a particle based on the dim (size) of the problem
-def generate(bound_l, bound_u):
-    particle = creator.Particle(np.random.uniform(bound_l,bound_u) for _ in range(DIM))
+def generate(size, bound_l, bound_u):
+    particle = creator.Particle(np.random.uniform(bound_l,bound_u) for _ in range(size))
     bound = bound_u - bound_l
-    particle.velocity = np.array([np.random.uniform(-abs(bound), abs(bound)) for _ in range(DIM)])
+    particle.velocity = np.array([np.random.uniform(-abs(bound), abs(bound)) for _ in range(size)])
+    # particle.velocity = [0 for _ in range(size)]
     particle.best_known = creator.Particle(particle)
     return particle
 
+# NOTE: remember to verify the correctness of this funciton
 # updating the velocity and position of the particle
 def updateParticle(particle, best, w, phi_p, phi_g):
     r_p = np.array([np.random.uniform(0,1) for _ in particle])
@@ -127,7 +137,78 @@ def updateParticle(particle, best, w, phi_p, phi_g):
     particle.velocity = np.add(v_w, np.add(v_p, v_g))
     particle[:] = np.add(particle, particle.velocity)
 
-# initialise the swarm with fitness values.
+# registering all the functions to the toolbox
+toolbox = base.Toolbox()
+toolbox.register("evaluate", rastrigin)
+toolbox.register("particle", generate, size=DIM, bound_l=-5, bound_u=5)
+toolbox.register("population", tools.initRepeat, list, toolbox.particle)
+toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
+toolbox.register("map", futures.map)
+
+# -----------------------------Main Algorithm--------------------------------
+
+def main():
+
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
+
+    logbook = tools.Logbook()
+    logbook.header = ["gen"] + stats.fields
+    best = None
+    # initialising our population
+    pop = toolbox.population(n=50)
+    list(map(initialiseSwarm, pop))
+
+    # assigning the previous best particles
+    prev_best = creator.Particle(best)
+    prev_best.fitness.values = best.fitness.values
+
+    g = 1
+    # evolving the particle population
+    while g <= GMAX:
+
+        # updating the particles in the swarm
+        list(map(updateSwarm, pop))
+
+        for particle in pop:
+            # update the global bests outside
+
+            # if relevant update the best global position
+            if particle.best_known.fitness.values > best.fitness.values:
+
+                best = creator.Particle(particle.best_known)
+                best.fitness.values = particle.best_known.fitness.values
+
+                # if the fitness has converged, stop evolving
+                if best.fitness.values[0] - prev_best.fitness.values[0] < EPSILON:
+
+                    terminate = True
+
+                # if the posiiton has converged, stop evolving
+                if np.sqrt(np.add.reduce(np.square(np.subtract(best, prev_best)))) < DELTA:
+
+                    terminate = True
+
+        # check if terminating conditions have been satisfied
+        if terminate:
+            print("fitness/position")
+            print(logbook.stream)
+            return pop, best
+
+        # keep track of the previous best position
+        prev_best = creator.Particle(best)
+        prev_best.fitness.values = best.fitness.values
+
+        # update our records
+        logbook.record(gen=g, **stats.compile(pop))
+        g = g + 1
+
+    print(logbook.stream)
+    return pop, best
+
 def initialiseSwarm(particle, best):
 
     # assigning the fitness values and initialising best known position
@@ -141,9 +222,6 @@ def initialiseSwarm(particle, best):
         best = creator.Particle(particle)
         best.fitness.values = particle.fitness.values
 
-    return best
-
-# updates a particle with new values
 def updateSwarm(particle, best):
 
     # move the particles with the update function and eval new fitness
@@ -156,27 +234,6 @@ def updateSwarm(particle, best):
         particle.best_known = creator.Particle(particle)
         particle.best_known.fitness.values = particle.fitness.values
 
-# ---------------------- toolbox -------------------------------------
-# registering all the functions to the toolbox
-toolbox = base.Toolbox()
-toolbox.register("evaluate", rastrigin)
-toolbox.register("particle", generate, bound_l=-5, bound_u=5)
-toolbox.register("population", tools.initRepeat, list, toolbox.particle)
-toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
-toolbox.register("map", futures.map)
 
-# ---------------------------------------------------------------------
-
-def main():
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
-
-    logbook = tools.Logbook()
-    logbook.header = ["gen"] + stats.fields
-
-    pop = toolbox.population(POPULATION)
-    #NOTE: consider a better way to do best 
-    best = list(map(initialiseSwarm, pop))
+if __name__ == "__main__":
+    print(main())
