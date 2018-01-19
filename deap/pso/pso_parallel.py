@@ -144,23 +144,29 @@ toolbox.register("population", tools.initRepeat, list, toolbox.particle)
 toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
 
 # -----------------------------Main Algorithm--------------------------------
+best = None
+prev_best = None
+terminate = False
+
+stats = tools.Statistics(lambda ind: ind.fitness.values)
+stats.register("avg", np.mean)
+stats.register("std", np.std)
+stats.register("min", np.min)
+stats.register("max", np.max)
+
+logbook = tools.Logbook()
+logbook.header = ["gen"] + stats.fields
+
 def main():
+    global best
+    global prev_best
 
     # initialising our population and stats
     pop = toolbox.population(n=50)
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
-
-    logbook = tools.Logbook()
-    logbook.header = ["gen"] + stats.fields
 
     g = 1
-    best = None
 
-    # list(map(initialiseSwarm, pop))
+    list(map(initialiseSwarm, pop))
 
     # assigning the previous best particles
     prev_best = creator.Particle(best)
@@ -169,7 +175,12 @@ def main():
     # evolving the particle population
     while g <= GMAX:
 
-        #list(map(updateSwarm, pop))
+        list(map(updateSwarm, pop))
+
+        if terminate:
+            print("fitness/position")
+            print(logbook.stream)
+            return pop, best
 
         # keep track of the previous best position
         prev_best = creator.Particle(best)
@@ -182,7 +193,9 @@ def main():
     print(logbook.stream)
     return pop, best
 
-def initialiseSwarm(pop):
+def initialiseSwarm(particle):
+    global best
+
     # assigning the fitness values and initialising best known position
     particle.fitness.values = toolbox.evaluate(particle)
     particle.best_known.fitness.values = particle.fitness.values
@@ -194,7 +207,10 @@ def initialiseSwarm(pop):
         best = creator.Particle(particle)
         best.fitness.values = particle.fitness.values
 
-def updateSwarm(pop):
+def updateSwarm(particle):
+    global best
+    global prev_best
+    global terminate
     # move the particles with the update function and eval new fitness
     toolbox.update(particle, best)
     particle.fitness.values = toolbox.evaluate(particle)
@@ -213,18 +229,13 @@ def updateSwarm(pop):
 
             # if the fitness has converged, stop evolving
             if best.fitness.values[0] - prev_best.fitness.values[0] < EPSILON:
-                logbook.record(gen=g, **stats.compile(pop))
-                print("fitness values")
-                print(logbook.stream)
-                return pop, best
+
+                terminate = True
 
             # if the posiiton has converged, stop evolving
             if np.sqrt(np.add.reduce(np.square(np.subtract(best, prev_best)))) < DELTA:
-                logbook.record(gen=g, **stats.compile(pop))
-                print("position values")
-                print(logbook.stream)
-                return pop, best
 
+                terminate = True
 
 if __name__ == "__main__":
     print(main())
