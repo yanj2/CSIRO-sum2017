@@ -1,0 +1,9 @@
+/home/yan127/virtual/lib/python3.6/site-packages/scoop/fallbacks.py:46: RuntimeWarning: SCOOP was not started properly.
+Be sure to start your program with the '-m scoop' parameter. You can find further information in the documentation.
+Your map call has been replaced by the builtin serial Python map().
+  RuntimeWarning
+([Particle([ 0.16683524,  1.79242268]), Particle([-1.76949546,  2.05822976]), Particle([ 7.919433  ,  1.76605034]), Particle([-0.23294613, -2.24160388]), Particle([ 5.74961833, -1.92431267]), Particle([ 0.87935165,  2.17921254]), Particle([ 0.07078162, -0.5690786 ]), Particle([ 1.56587812,  1.58103918]), Particle([ 4.63673149, -2.58886042]), Particle([ 1.47179864,  0.96556599])], Particle([ 1.99199877,  1.87878909]))
+
+real	4m10.792s
+user	0m0.161s
+sys	0m0.058s

@@ -46,6 +46,11 @@ PSO Algorithm:
 """
 import operator
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 from deap import base
 from deap import benchmarks
@@ -57,6 +62,19 @@ DELTA = 1e-7
 EPSILON = 1e-7
 DIM = 2
 
+# ------------------------surface plot ------------------------------------
+# fig = plt.figure() #NOTE: zorder flag for depth??
+# ax = fig.gca(projection='3d')
+#
+# X = np.arange(-5, 5, 0.1)
+# Y = np.arange(-5, 5, 0.1)
+# X, Y = np.meshgrid(X,Y)
+#
+# Z = -1.0 * (X ** 2 + Y **2)
+#
+# ax.plot_surface(X,Y,Z)
+# ax.plot([0],[0],'go')
+# -------------------------------------------------------------------------
 # Creates a fitness object that minimises its fitness value
 creator.create("Fitness", base.Fitness, weights=(1.0,))
 
@@ -73,7 +91,7 @@ creator.create("Particle", np.ndarray, fitness=creator.Fitness, velocity=np.ndar
 # if they start at a point far away from the optima
 
 def sphere(individual):
-    return -1.0 * np.sum((np.array(individual) - 3.)**2),
+    return -1.0 * np.sum(np.array(individual)**2),
 
 def rastrigin(individual):
     # 0.8,0.8,0.8
@@ -154,7 +172,7 @@ def updateParticle(particle, best, w, phi_p, phi_g):
 
 # registering all the functions to the toolbox
 toolbox = base.Toolbox()
-toolbox.register("evaluate", rastrigin)
+toolbox.register("evaluate", sphere)
 toolbox.register("particle", generate, size=DIM, bound_l=-5, bound_u=5)
 toolbox.register("population", tools.initRepeat, list, toolbox.particle)
 toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
@@ -173,8 +191,10 @@ def main():
     logbook = tools.Logbook()
     logbook.header = ["gen"] + stats.fields
 
+
     g = 1
     best = None
+
     for particle in pop:
 
         # assigning the fitness values and initialising best known position
@@ -236,9 +256,6 @@ def main():
 
     print(logbook.stream)
     return pop, best
-
-
-
 
 if __name__ == "__main__":
     print(main())
