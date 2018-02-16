@@ -16,7 +16,7 @@ PSO Algorithm:
     - find global best position while initialising the swarm
     - sample the velocity per particle from a uniform distribution
 
-2) track prior global best (??)
+2) track prior global best
 
 3) swarm evolution
     - for each particle in the swarm:
@@ -62,33 +62,15 @@ DELTA = 1e-7
 EPSILON = 1e-7
 DIM = 2
 
-# ------------------------surface plot ------------------------------------
-# fig = plt.figure() #NOTE: zorder flag for depth??
-# ax = fig.gca(projection='3d')
-#
-# X = np.arange(-5, 5, 0.1)
-# Y = np.arange(-5, 5, 0.1)
-# X, Y = np.meshgrid(X,Y)
-#
-# Z = -1.0 * (X ** 2 + Y **2)
-#
-# ax.plot_surface(X,Y,Z)
-# ax.plot([0],[0],'go')
 # -------------------------------------------------------------------------
 # Creates a fitness object that minimises its fitness value
 creator.create("Fitness", base.Fitness, weights=(1.0,))
 
-# check all the attributes that we will need !!
 # Creates a particle with initial declaration of its contained attributes
-# Particle creator is a list container that holds the attributes: fitness, velocity, .... NOTE: update
-#NOTE:????????????????????
 creator.create("Particle", np.ndarray, fitness=creator.Fitness, velocity=np.ndarray(DIM), best_known=None)
 
 # ----------------------------Optimisation Functions------------------------------
-# evaluates the fitness of the position
-
-# NOTE: need to check whether the particles will still find the right place`
-# if they start at a point far away from the optima
+# evaluates the fitness of the position using black box optimisation benchmarks
 
 def sphere(individual):
     return -1.0 * np.sum(np.array(individual)**2),
@@ -134,11 +116,9 @@ def generate(size, bound_l, bound_u):
     particle = creator.Particle(np.random.uniform(bound_l,bound_u) for _ in range(size))
     bound = bound_u - bound_l
     particle.velocity = np.array([np.random.uniform(-abs(bound), abs(bound)) for _ in range(size)])
-    # particle.velocity = [0 for _ in range(size)]
     particle.best_known = creator.Particle(particle)
     return particle
 
-# NOTE: remember to verify the correctness of this funciton
 # updating the velocity and position of the particle
 def updateParticle(particle, best, w, phi_p, phi_g):
     r_p = np.array([np.random.uniform(0,1) for _ in particle])
@@ -154,22 +134,6 @@ def updateParticle(particle, best, w, phi_p, phi_g):
     particle.velocity = np.add(v_w, np.add(v_p, v_g))
     particle[:] = np.add(particle, particle.velocity)
 
-    # list of best_known - curr
-    # p = list(map(operator.sub, particle.best_known, particle))
-
-    # list of global_best - curr
-    # g = list(map(operator.sub, best, particle))
-
-    # scaled impact of best positions
-    # v_p = [phi_p * r * x for x,r in zip(p,r_p)]
-    # v_g = [phi_g * r * x for x,r in zip(g,r_g)]
-
-    # scaled velocity
-    # v_w = [w * x for x in particle.velocity]
-    # particle.velocity = list(map(operator.add, v_w, map(operator.add, v_p, v_g)))
-
-    # particle[:] = list(map(operator.add, particle, particle.velocity))
-
 # registering all the functions to the toolbox
 toolbox = base.Toolbox()
 toolbox.register("evaluate", sphere)
@@ -180,7 +144,7 @@ toolbox.register("update", updateParticle, phi_p=0.8, phi_g=0.8, w=0.8)
 # -----------------------------Main Algorithm--------------------------------
 def main():
 
-    # initialising our population and stats
+    # initialising our population and stats to the logbook
     pop = toolbox.population(n=50)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
@@ -190,7 +154,6 @@ def main():
 
     logbook = tools.Logbook()
     logbook.header = ["gen"] + stats.fields
-
 
     g = 1
     best = None

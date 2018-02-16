@@ -1,0 +1,18 @@
+[2018-02-13 14:35:01,433] launcher  INFO    SCOOP 0.7 1.1 on linux using Python 3.6.1 (default, Apr 12 2017, 10:06:41) [GCC Intel(R) C++ gcc 4.8 mode], API: 1013
+[2018-02-13 14:35:01,433] launcher  INFO    Detected SLURM environment.
+[2018-02-13 14:35:01,433] launcher  INFO    Deploying 3 worker(s) over 3 host(s).
+[2018-02-13 14:35:01,433] launcher  INFO    Worker distribution: 
+[2018-02-13 14:35:01,433] launcher  INFO       b096:	0 + origin
+[2018-02-13 14:35:01,433] launcher  INFO       b097:	1 
+[2018-02-13 14:35:01,433] launcher  INFO       b098:	1 
+([Particle([-4.33811379,  2.51389186]), Particle([ 0.75646444, -4.94773506]), Particle([ 0.8020396 ,  5.25696126]), Particle([ 4.68908781, -1.42784262]), Particle([ 4.34314386, -1.39407255]), Particle([ 0.81616241,  0.06588165]), Particle([-2.23046896, -3.16535293]), Particle([-0.50487904, -1.8629647 ]), Particle([ 0.68888834, -3.27907675]), Particle([-1.52486582,  0.15025872])], Particle([ 0.81616241,  0.06588165]))
+[2018-02-13 14:36:43,289] launcher  (127.0.0.1:43727) INFO    Root process is done.
+[2018-02-13 14:35:02,114] __main__  INFO    Worker(s) launched using /bin/bash
+Warning: Permanently added 'b098,10.141.1.164' (ECDSA) to the list of known hosts.
+[2018-02-13 14:35:02,598] __main__  INFO    Worker(s) launched using /bin/bash
+Warning: Permanently added 'b097,10.141.1.163' (ECDSA) to the list of known hosts.
+[2018-02-13 14:36:43,889] launcher  (127.0.0.1:43727) INFO    Finished cleaning spawned subprocesses.
+
+real	1m42.594s
+user	0m0.335s
+sys	0m0.107s

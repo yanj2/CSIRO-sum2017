@@ -16,9 +16,7 @@ PSO Algorithm:
     - find global best position while initialising the swarm
     - sample the velocity per particle from a uniform distribution
 
-2) track prior global best (for terminating condition)
-
-3) swarm evolution
+2) swarm evolution
     - for each particle in the swarm:
         - sample the r_p, r_g values from uniform distribution(0,1)
         - with w = phi_p = phi_g = 0.5, calculate the new velocity with:
@@ -36,12 +34,17 @@ PSO Algorithm:
     - update generation
     - update prev best
 
-4) termination conditions
-    - global best displacement smaller than delta
-    - fitness value of best increased by less than threshold epsilon
+3) termination conditions
     - exceeded max generations
 
-5) return global best
+4) return global best
+
+Here, we talk about the global best as being the particle that has the best position
+or in this case, the best output value. Best known refers to the best particle position
+that has been seen by a particular particle.
+
+NOTE: there were some issues with using numpy.sum potentially problems with using
+reduce
 
 """
 import numpy as np
@@ -54,18 +57,13 @@ from deap import tools
 
 from scoop import futures
 
-GMAX = 5            # Max number of generations
+GMAX = 5               # Max number of generations
 DELTA = 1e-7           # Smallest position increment allowed
 EPSILON = 1e-7         # Smallest fitness value increment allowed
 DIM = 2                # No. of Dimensions in the problem
 POPULATION = 10        # Size of the particle swarm
 
 # ----------------------------Optimisation Functions------------------------------
-# Evaluates the fitness of the position
-
-# def sphere(individual):
-#     return -1.0 * np.sum((individual - 3.)**2),
-
 def sphere(individual):
     try:
         individual = (individual - 3.)**2
@@ -111,7 +109,7 @@ def bukin6(individual):
     return -1.0 * (100 * sqrt_component + abs_component),
 
 # --------------------------Swarm operations ---------------------------------
-# Creates a fitness object that minimises its fitness value
+# Creates a fitness object that maximises its fitness value
 creator.create("Fitness", base.Fitness, weights=(1.0,))
 
 # Creates a particle with initial declaration of its contained attributes
@@ -144,9 +142,9 @@ def updateParticle(particle, best, generator, w, phi_p, phi_g):
 
 # initialise the swarm with fitness values.
 def initialiseSwarm(particle):
+
     # assigning the fitness values and initialising best known position
     particle.fitness.values = toolbox.evaluate(particle)
-
     particle.best_known.fitness.values = particle.fitness.values
 
     return particle.fitness.values
@@ -158,18 +156,21 @@ def updateSwarm(particle, best, generator):
     toolbox.update(particle, best, generator)
     particle.fitness.values = toolbox.evaluate(particle)
 
-    # update the best_known position
+    # if the particle output is better than the best known output, update the
+    # best known for this particle
     if particle.fitness.values > particle.best_known.fitness.values:
 
         particle.best_known = creator.Particle(particle)
         particle.best_known.fitness.values = particle.fitness.values
 
+        # if the particle best known happens to be better than the global best
+        # then also update the global best value 
         if particle.best_known.fitness.values > best.fitness.values:
 
             best = creator.Particle(particle.best_known)
             best.fitness.values = particle.best_known.fitness.values
 
-    time.sleep(5)
+    time.sleep(5)    # simulating long computation time
     return best
 
 def createBest(best):
@@ -177,7 +178,9 @@ def createBest(best):
     particle.fitness.values = best.fitness.values
     return particle
 # ---------------------- toolbox -------------------------------------
-# registering all the functions to the toolbox
+# registering all the functions to the toolbox for more convenient access
+# by assignment default parameter values. To use these functions call
+# toolbox.<functionname>
 toolbox = base.Toolbox()
 toolbox.register("evaluate", rastrigin)
 toolbox.register("particle", generate, bound_l=-5, bound_u=5)
@@ -187,23 +190,19 @@ toolbox.register("map", futures.map)
 
 # ---------------------------------------------------------------------
 def main():
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
-
-    logbook = tools.Logbook()
-    logbook.header = ["gen"] + stats.fields
 
     # initialise the swarm of particles with their fitness values
     pop = toolbox.population(n=POPULATION)
     fitness = list(map(initialiseSwarm, pop))
-    # print("-----------------------initialised-------------------------")
+
     # initialise the global best particle in the swarm
     best = creator.Particle(pop[fitness.index(max(fitness))])
     best.fitness.values = pop[fitness.index(max(fitness))].fitness.values
 
+    # create a list of global best particles so that we can map each particle
+    # to a global best value when updating the particle positions. At the same time,
+    # create a list of random generators so that each process runs with a different seed
+    # as this also impacts the performance of the algorithm
     global_best = []
     random_generators = []
     for _ in range(POPULATION):
@@ -213,12 +212,14 @@ def main():
     g = 1
     while g <= GMAX:
 
-        #print("------------------------------------------------------")
-        #NOTE: Here we want to somehow make the random seed different for each process
+        # update the particles in the swarm and return a list of the new global
+        # best particles
         global_best = list(toolbox.map(updateSwarm, pop, global_best, random_generators))
+
+        # calculate the best global best from the list and create a new global
+        # best list
         best = creator.Particle(global_best[0])
         best.fitness.values = global_best[0].fitness.values
-
         for n in range(1, POPULATION):
             if global_best[n].fitness.values > best.fitness.values:
                 best = creator.Particle(global_best[n])
@@ -228,10 +229,9 @@ def main():
         for _ in range(POPULATION):
             global_best.append(createBest(best))
 
-        # logbook.record(gen=g, **stats.compile(pop))
+        # iterate the generation
         g = g + 1
 
-    # print(logbook.stream)
     return pop, best
 
 if __name__ == "__main__":

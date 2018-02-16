@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/apps/python/3.6.1/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/apps/python/3.6.1/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/home/yan127/virtual/lib/python3.6/site-packages/scoop/__main__.py", line 21, in <module>
+    main()
+  File "/home/yan127/virtual/lib/python3.6/site-packages/scoop/launcher.py", line 456, in main
+    hosts = utils.getHosts(args.hostfile, args.hosts)
+  File "/home/yan127/virtual/lib/python3.6/site-packages/scoop/utils.py", line 141, in getHosts
+    return getHostsFromFile(filename)
+  File "/home/yan127/virtual/lib/python3.6/site-packages/scoop/utils.py", line 161, in getHostsFromFile
+    with open(filename) as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'host.lit'
+
+real	0m0.229s
+user	0m0.072s
+sys	0m0.040s
